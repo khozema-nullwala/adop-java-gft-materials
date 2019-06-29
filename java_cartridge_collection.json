@@ -1,0 +1,25 @@
+
+{
+	"name": "DevOpsAcademy_Cartridge_Collection",
+	"cartridges": [{
+		"folder": {
+			"name": "vendorservice",
+			"display_name": "vendorservice",
+			"description": "This pipeline is used in for Vendor Service API!"
+		},
+		"cartridge": {
+			"url": "https://github.com/khozema-nullwala/adop-cartridge-java-gft-vendor-new-sb.git",
+			"desc": "Vendor Service Cartridge"
+		}
+	}, {
+		"folder": {
+			"name": "materialservice",
+			"display_name": "materialservice",
+			"description": "This pipeline is used for Material Service API!"
+		},
+		"cartridge": {
+			"url": "https://github.com/khozema-nullwala/adop-cartridge-java-gft-material-new-sb.git",
+			"desc": "Material Service Cartridge"
+		}
+	}]
+}
