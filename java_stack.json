@@ -62,7 +62,7 @@
     },
     "Parameters": {
         "AdopUsername": {
-            "Default": "changeme",
+            "Default": "training",
             "Description": "ADOP admin account username. Username can not be set to 'admin' or 'Admin' and it must contain only letters and numbers. Minimum length is 3.",
             "Type": "String",
             "MinLength": "3",
@@ -76,18 +76,6 @@
             "MinLength": "8",
             "AllowedPattern": "(?!password|Password)[A-Za-z0-9]*([a-zA-Z]+[0-9]+|[0-9]+[a-zA-Z]+)",
             "ConstraintDescription": "Password must contain only letters and numbers, it must contain at least one number, and cannot contain your username or word \"password\""
-        },
-        "AwsAccessKey": {
-            "NoEcho": "true",
-            "Description": "AWS Access key for jenkins",
-            "Type": "String",
-            "MinLength": "8"
-        },
-        "AwsSecretKey": {
-            "NoEcho": "true",
-            "Description": "AWS Secret key for jenkins",
-            "Type": "String",
-            "MinLength": "8"
         },
         "KeyName": {
             "Description": "Key-pair name to use. Note : Make sure you choose a key which you have.",
@@ -142,6 +130,14 @@
                         ]
                       ]
                     }
+                  },
+				  {
+                    "Key": "Accessibility",
+                    "Value": "Public"
+                  },
+				  {
+                    "Key": "Location",
+                    "Value": "ATCI"
                   }
                 ],
                 "UserData": {
@@ -151,17 +147,17 @@
                                 "#!/bin/bash\n",
                                 "yum update -y\n",
                                 "cat > /etc/yum.repos.d/docker.repo <<-'EOF'\n",
-                                "[dockerrepo]\n",
-                                "name=Docker Repository\n",
-                                "baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/\n",
+                                "[docker-ce-stable]\n",
+                                "name=Docker CE Stable - $basearch\n",
+                                "baseurl=https://download.docker.com/linux/centos/7/$basearch/stable\n",
                                 "enabled=1\n",
                                 "gpgcheck=1\n",
-                                "gpgkey=https://yum.dockerproject.org/gpg\n",
+                                "gpgkey=https://download.docker.com/linux/centos/gpg\n",
                                 "EOF\n",
                                 "echo '\n==============================================================================='\n",
                                 "echo '=========================== Installing Yum Packages ==========================='\n",
                                 "echo '===============================================================================\n'\n",
-                                "yum -y install docker-engine-17.05.0.ce-1.el7.centos.x86_64\n",
+                                "yum update -y && yum -y install docker-ce-19.03.9\n",
                                 "systemctl daemon-reload && systemctl restart docker\n",
                                 "yum -y install wget unzip git\n",
                                 "grep 'tcp://0.0.0.0:2375' /usr/lib/systemd/system/docker.service || sed -i 's#ExecStart\\(.*\\)$#ExecStart\\1 -H tcp://0.0.0.0:2375 -H unix:///var/run/docker.sock#' /usr/lib/systemd/system/docker.service\n",
@@ -174,7 +170,7 @@
                                 "rpm -Uvh epel-release-6-8.noarch.rpm\n",
                                 "easy_install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
                                 "echo '=========================== Installing Docker Compose =========================='\n",
-                                "curl -L https://github.com/docker/compose/releases/download/1.16.1/docker-compose-`uname -s`-`uname -m` > /usr/bin/docker-compose\n",
+                                "curl -L https://github.com/docker/compose/releases/download/1.27.1/docker-compose-`uname -s`-`uname -m` > /usr/bin/docker-compose\n",
                                 "chmod +x /usr/bin/docker-compose\n",
                                 "echo '=========================== Running Docker Compose =========================='\n",
                                 "export IP=$(hostname --ip-address)\n",
@@ -189,7 +185,7 @@
                                 "git clone https://github.com/Accenture/adop-docker-compose\n",
 
                                 "cd /data/adop-docker-compose\n",
-                                "git checkout 19b6fa4b50c998dbb98cf03e019d61e14a0a112b\n",
+                                "git checkout doa\n",
                                 "export METADATA_URL='http://169.254.169.254/latest/meta-data'\n",
                                 "export MAC_ADDRESS=$(curl -s ${METADATA_URL}/network/interfaces/macs/)\n",
                                 "export AWS_VPC_ID=$(curl -s ${METADATA_URL}/network/interfaces/macs/${MAC_ADDRESS}/vpc-id/)\n",
@@ -221,7 +217,6 @@
                                 "./adop workspace -w javastreamims create; sleep 10\n",
                                 "./adop project -p devops -w javastreamims create; sleep 10\n",
                                 "./adop project -p devops -w javastreamims load_collection -c https://raw.githubusercontent.com/khozema-nullwala/adop-java-gft-materials/master/java_cartridge_collection.json\n",
-                                "./adop extension add_credentials -u ",{"Ref": "AwsAccessKey"}," -p ",{"Ref": "AwsSecretKey"}," -i aws\n",
                                 "set +e\n",
                                 "curl -X PUT -H 'Content-Type:' --data-binary '{\"Status\" : \"SUCCESS\",",
                                 "\"Reason\" : \"javastreamims is ready\",",
@@ -241,7 +236,7 @@
             "Properties": {
                 "GroupDescription": "Enabling access to all IPs and below listed ports",
                 "SecurityGroupIngress": [{
-                    "CidrIp": "0.0.0.0/0",
+                    "CidrIp": "0.0.0.0/32",
                     "FromPort": "22",
                     "IpProtocol": "tcp",
                     "ToPort": "22"
@@ -255,11 +250,6 @@
                     "FromPort": "443",
                     "IpProtocol": "tcp",
                     "ToPort": "443"
-                }, {
-                    "CidrIp": "0.0.0.0/0",
-                    "FromPort": "25826",
-                    "IpProtocol": "udp",
-                    "ToPort": "25826"
                 }],
                 "VpcId": {
                     "Ref": "Vpc"
@@ -316,6 +306,18 @@
             },
             "Type": "AWS::EC2::VPC"
         },
+		"FlowLog": {
+			"Type" : "AWS::EC2::FlowLog",
+			"Properties" : {
+				"LogDestination" : "arn:aws:s3:::flowlogbucketdevops",
+				"LogDestinationType" : "s3",
+				"ResourceId" : {
+					"Ref" : "Vpc"
+				},
+				"ResourceType" : "VPC",
+				"TrafficType" : "ALL"
+			}
+		},
         "VpcGatewayAttachment": {
             "Properties": {
                 "InternetGatewayId": {
